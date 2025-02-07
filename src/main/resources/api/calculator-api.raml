@@ -1,0 +1,27 @@
+#%RAML 1.0
+title: Calculator API
+description: CAlc API
+
+/calc:
+  get:
+    queryParameters:
+      number1 : 
+        required: true
+        type: integer
+      number2 :
+        required: true
+        type: integer    
+      op:
+        required: true
+        type: string
+        enum: ["+", "-" , "*", "/"] 
+    responses:
+      200:
+        body:
+          application/json:
+            example: {"Result" : 20}
+              
+      
+
+          
+          

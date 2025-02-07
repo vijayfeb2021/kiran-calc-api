@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="calc-impl-apiFlow" doc:id="bd33cb5c-73b7-4c30-b1f2-ca365dff8e37" >
+		<logger level="INFO" doc:name="Logger" doc:id="8ea88a3b-e906-4033-9578-decb376a82c9" message='#[output application/json&#10;---&#10;{&#10;	"Trace Point" : "Start Of Implementation",&#10;	"Payload" : payload,&#10;	"Attributes" : attributes&#10;}]'/>
+		<ee:transform doc:name="perform-operation" doc:id="6eeb3f5a-e5a3-4780-9fb1-bdbd19102f4b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var v1 = attributes.queryParams.number1 as Number
+var v2 = attributes.queryParams.number2 as Number
+var oper = attributes.queryParams.op
+
+
+var result = if (oper == "+") v1 + v2
+else if (oper == "-") v1 - v2
+else if (oper == "+") v1 + v2
+else if (oper == "*") v1 * v2
+else "invalid operation sent"
+
+/*Another way to write the expression*/
+var result2 = oper match {
+    case "+" -> v1 + v2
+    case "-" -> v1 -  v2
+    case "*" -> v1*v2
+    case "/" -> v1 / v2
+    else -> "invalid operation sent"
+
+}
+---
+
+{
+   "Result":  result2
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="64115a59-65f0-46ff-954a-2529060c0fe2" message='#[output application/json&#10;---&#10;{&#10;	"Trace Point" : "End Of Implementation",&#10;	"Payload" : payload,&#10;	"Attributes" : attributes&#10;}]'/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="feece187-004c-47b8-ae6d-e7987ae98dcf" when="error.description contains 'Division by zero'">
+				<ee:transform doc:name="Transform Message" doc:id="d42bf1ae-74ab-4e56-be1d-672278765d3f" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Message":  "Denominator should not be zero",
+	"TraceId" : correlationId,
+	"TimeStamp" :  now() as DateTime {format: "yyyy-MM-dd hh:mm:ss"}
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="875fad17-b942-40b9-823c-715547cb7bac" >
+				<ee:transform doc:name="x-form-error-response" doc:id="cc488948-7583-4e76-a529-f9daa6d0557f">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Message": error.description default "Unable to Process Request",
+	"TraceId" : correlationId,
+	"TimeStamp" :  now() as DateTime {format: "yyyy-MM-dd hh:mm:ss"}
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
